@@ -262,30 +262,57 @@ public:
             case 0xF000:
                 switch (opcode & 0x00FF) {
                 case 0x0007: // Fx07 - LD Vx, DT
+                    x = (opcode & 0x0F00) >> 8;
+                    V[x] = delayTimer;
+                    pc += 2;
                     break;
 
                 case 0x000A: // Fx0A - LD Vx, K
+                    // Wait for key press, store the value of the key in Vx.
                     break;
 
                 case 0x0015: // Fx15 - LD DT, Vx
+                    x = (opcode & 0x0F00) >> 8;
+                    delayTimer = V[x];
+                    pc += 2;
                     break;
 
                 case 0x0018: // Fx18 - LD ST, Vx
+                    x = (opcode & 0x0F00) >> 8;
+                    soundTimer = V[x];
+                    pc += 2;
                     break;
 
                 case 0x001E: // Fx1E - ADD I, Vx
+                    x = (opcode & 0x0F00) >> 8;
+                    I += V[x];
+                    pc += 2;
                     break;
 
                 case 0x0029: // Fx29 - LD F, Vx
+                    x = (opcode & 0x0F00) >> 8;
                     break;
 
                 case 0x0033: // Fx33 - LD B, Vx
+                    x = (opcode & 0x0F00) >> 8;
+                    memory[I] = V[x] / 100;
+                    memory[I + 1] = (V[x] / 10) % 10;
+                    memory[I + 2] = V[x] % 10;
+                    pc += 2;
                     break;
 
                 case 0x0055: // Fx55 - LD [I], Vx
+                    x = (opcode & 0x0F00) >> 8;
+                    for (int i = 0; i <= x; i++)
+                        memory[I + i] = V[i];
+                    pc += 2;
                     break;
 
                 case 0x0065: // Fx65 - LD Vx, [I]
+                    x = (opcode & 0x0F00) >> 8;
+                    for (int i = 0; i <= x; i++)
+                        V[i] = memory[I + i];
+                    pc += 2;
                     break;
 
                 default:
