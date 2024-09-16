@@ -336,10 +336,3 @@ public:
         }
     }
 };
-
-int main() {
-    Chip8 chip8 = Chip8();
-    chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
-
-    return 0;
-}

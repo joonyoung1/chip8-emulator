@@ -1,3 +1,4 @@
 .vscode/
-chip8
+chip8-emulator
+*.o
 *.ch8
