@@ -236,9 +236,22 @@ public:
                 y = (opcode & 0x00F0) >> 4;
                 n = opcode & 0x000F;
 
-                // display n-byte sprite starting at memory location I at
-                // (Vx,Vy) set VF = collision.
+                for (int spriteY = 0; spriteY < n; spriteY++) {
+                    uint8_t spriteByte = memory[I + spriteY];
 
+                    for (int spriteX = 0; spriteX < 8; spriteX++) {
+                        if (spriteByte & (0x80 >> spriteX)) {
+                            int displayX = (V[x] + spriteX) % 64;
+                            int displayY = (V[y] + spriteY) % 32;
+                            int i = displayY * 64 + displayX;
+
+                            if (display[i])
+                                V[0xF] = 1;
+                            display[i] = display[i] ^ 1;
+                        }
+                    }
+                }
+                pc += 2;
                 break;
 
             case 0xE000:
