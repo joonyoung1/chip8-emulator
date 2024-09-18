@@ -46,11 +46,12 @@ int main(int argc, char* argv[]) {
     chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
 
     bool running = true;
-    SDL_Event* event;
+    int temp;
+    SDL_Event event;
 
     while (running) {
-        while (SDL_PollEvent(event)) {
-            if (event->type == SDL_QUIT) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
                 running = false;
             }
         }
@@ -58,6 +59,8 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < 10; i++) {
             chip8.run();
         }
+        std::cout << chip8.pc;
+        std::cin >> temp;
 
         SDL_RenderClear(renderer);
         for (int y = 0; y < DISPLAY_HEIGHT; y++) {
