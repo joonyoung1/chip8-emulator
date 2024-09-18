@@ -36,6 +36,9 @@ public:
         sp = 0;
         delayTimer = 0;
         soundTimer = 0;
+
+        display[100] = true;
+        display[101] = true;
     }
 
     void loadRom(std::string filename) {
@@ -75,8 +78,8 @@ public:
                 break;
 
             case 0x00EE: // ooEE - RET
-                pc = stack[sp];
                 sp--;
+                pc = stack[sp];
                 pc += 2;
                 break;
 
@@ -281,6 +284,7 @@ public:
 
             case 0x000A: // Fx0A - LD Vx, K
                 // Wait for key press, store the value of the key in Vx.
+                pc += 2;
                 break;
 
             case 0x0015: // Fx15 - LD DT, Vx
@@ -303,6 +307,8 @@ public:
 
             case 0x0029: // Fx29 - LD F, Vx
                 x = (opcode & 0x0F00) >> 8;
+                I = V[x] * 5;
+                pc += 2;
                 break;
 
             case 0x0033: // Fx33 - LD B, Vx

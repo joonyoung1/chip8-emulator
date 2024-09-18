@@ -1,4 +1,4 @@
-#include "chip8.hpp"
+#include "chip8.cpp"
 #include <SDL2/SDL.h>
 #include <iostream>
 
@@ -6,7 +6,7 @@ const int DISPLAY_WIDTH = 64;
 const int DISPLAY_HEIGHT = 32;
 const int WINDOW_SCALE = 10;
 
-bool initializeSDL(SDL_Window* window, SDL_Renderer* renderer) {
+bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
         return false;
@@ -30,7 +30,6 @@ bool initializeSDL(SDL_Window* window, SDL_Renderer* renderer) {
         SDL_Quit();
         return false;
     }
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
     return true;
 }
@@ -43,7 +42,8 @@ int main(int argc, char* argv[]) {
         return 1;
 
     Chip8 chip8;
-    chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
+    // chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
+    chip8.loadRom("test_opcode.ch8");
 
     bool running = true;
     int temp;
@@ -59,10 +59,11 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < 10; i++) {
             chip8.run();
         }
-        std::cout << chip8.pc;
-        std::cin >> temp;
 
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         for (int y = 0; y < DISPLAY_HEIGHT; y++) {
             for (int x = 0; x < DISPLAY_WIDTH; x++) {
                 if (chip8.display[y * DISPLAY_WIDTH + x]) {
