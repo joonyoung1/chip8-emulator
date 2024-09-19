@@ -96,8 +96,8 @@ public:
 
         case 0x2000: // 2nnn - CALL addr
             addr = opcode & 0x0FFF;
-            sp++;
             stack[sp] = pc;
+            sp++;
             pc = addr;
             break;
 
