@@ -283,8 +283,13 @@ public:
                 break;
 
             case 0x000A: // Fx0A - LD Vx, K
-                // Wait for key press, store the value of the key in Vx.
-                pc += 2;
+                for (int i = 0; i < 16; i++) {
+                    if (keypad[i]) {
+                        V[x] = i;
+                        pc += 2;
+                        break;
+                    }
+                }
                 break;
 
             case 0x0015: // Fx15 - LD DT, Vx

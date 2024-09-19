@@ -1,27 +1,29 @@
 #include "chip8.cpp"
 #include <SDL2/SDL.h>
+#include <chrono>
 #include <iostream>
 #include <map>
+#include <thread>
 
 std::map<SDL_Keycode, int> keyMap;
 
 void initializeKeyMap() {
-    keyMap[SDLK_1] = 0;
-    keyMap[SDLK_2] = 1;
-    keyMap[SDLK_3] = 2;
-    keyMap[SDLK_4] = 3;
-    keyMap[SDLK_q] = 4;
-    keyMap[SDLK_w] = 5;
-    keyMap[SDLK_e] = 6;
-    keyMap[SDLK_r] = 7;
-    keyMap[SDLK_a] = 8;
-    keyMap[SDLK_s] = 9;
-    keyMap[SDLK_d] = 10;
-    keyMap[SDLK_f] = 11;
-    keyMap[SDLK_z] = 12;
-    keyMap[SDLK_x] = 13;
-    keyMap[SDLK_c] = 14;
-    keyMap[SDLK_v] = 15;
+    keyMap[SDLK_1] = 0x1;
+    keyMap[SDLK_2] = 0x2;
+    keyMap[SDLK_3] = 0x3;
+    keyMap[SDLK_4] = 0xC;
+    keyMap[SDLK_q] = 0x4;
+    keyMap[SDLK_w] = 0x5;
+    keyMap[SDLK_e] = 0x6;
+    keyMap[SDLK_r] = 0xD;
+    keyMap[SDLK_a] = 0x7;
+    keyMap[SDLK_s] = 0x8;
+    keyMap[SDLK_d] = 0x9;
+    keyMap[SDLK_f] = 0xE;
+    keyMap[SDLK_z] = 0xA;
+    keyMap[SDLK_x] = 0x0;
+    keyMap[SDLK_c] = 0xB;
+    keyMap[SDLK_v] = 0xF;
 }
 
 const int DISPLAY_WIDTH = 64;
@@ -65,7 +67,9 @@ int main(int argc, char* argv[]) {
     initializeKeyMap();
 
     Chip8 chip8;
-    chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
+    // chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
+    // chip8.loadRom("15 Puzzle [Roger Ivie].ch8");
+    chip8.loadRom("Animal Race [Brian Astle].ch8");
     // chip8.loadRom("test_opcode.ch8");
 
     bool running = true;
@@ -80,6 +84,11 @@ int main(int argc, char* argv[]) {
                 auto it = keyMap.find(event.key.keysym.sym);
                 if (it != keyMap.end()) {
                     chip8.keypad[it->second] = true;
+                }
+            } else if (event.type == SDL_KEYUP) {
+                auto it = keyMap.find(event.key.keysym.sym);
+                if (it != keyMap.end()) {
+                    chip8.keypad[it->second] = false;
                 }
             }
         }
@@ -105,6 +114,7 @@ int main(int argc, char* argv[]) {
             }
         }
         SDL_RenderPresent(renderer);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
     SDL_DestroyWindow(window);
