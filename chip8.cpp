@@ -36,9 +36,6 @@ public:
         sp = 0;
         delayTimer = 0;
         soundTimer = 0;
-
-        display[100] = true;
-        display[101] = true;
     }
 
     void loadRom(std::string filename) {
@@ -174,7 +171,7 @@ public:
             case 0x0005: // 8xy5 - SUB Vx, Vy
                 x = (opcode & 0x0F00) >> 8;
                 y = (opcode & 0x00F0) >> 4;
-                V[0xF] = (V[x] > V[y]) ? 1 : 0;
+                V[0xF] = (V[x] >= V[y]) ? 1 : 0;
                 V[x] -= V[y];
                 pc += 2;
                 break;
@@ -189,7 +186,7 @@ public:
             case 0x0007: // 8xy7 - SUBN Vx {, Vy}
                 x = (opcode & 0x0F00) >> 8;
                 y = (opcode & 0x00F0) >> 4;
-                V[0xF] = (V[x] < V[y]) ? 1 : 0;
+                V[0xF] = (V[x] <= V[y]) ? 1 : 0;
                 V[x] = V[y] - V[x];
                 pc += 2;
                 break;
