@@ -69,8 +69,8 @@ int main(int argc, char* argv[]) {
     Chip8 chip8;
     // chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
     // chip8.loadRom("15 Puzzle [Roger Ivie].ch8");
-    chip8.loadRom("Animal Race [Brian Astle].ch8");
-    // chip8.loadRom("test_opcode.ch8");
+    // chip8.loadRom("Animal Race [Brian Astle].ch8");
+    chip8.loadRom("test_opcode.ch8");
 
     bool running = true;
     int temp;
