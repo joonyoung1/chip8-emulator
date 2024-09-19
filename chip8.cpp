@@ -57,7 +57,7 @@ public:
         soundTimer = 0;
 
         for (int i = 0; i < 80; i++) {
-            memory[0x50 + i] = fontset[i];
+            memory[i] = fontset[i];
         }
     }
 
@@ -84,6 +84,11 @@ public:
 
         std::mt19937 rng(std::random_device{}());
         std::uniform_int_distribution<int> dist(0, 255);
+
+        if (delayTimer > 0)
+            delayTimer--;
+        if (soundTimer > 0)
+            soundTimer--;
 
         opcode = memory[pc];
         opcode <<= 8;
@@ -186,11 +191,12 @@ public:
                 break;
 
             case 0x0004: // 8xy4 - ADD Vx, Vy
+                x = (opcode & 0x0F00) >> 8;
+                y = (opcode & 0x00F0) >> 4;
                 V[x] += V[y];
                 V[0xF] = (V[x] < V[y]) ? 1 : 0;
                 pc += 2;
                 break;
-
             case 0x0005: // 8xy5 - SUB Vx, Vy
                 x = (opcode & 0x0F00) >> 8;
                 y = (opcode & 0x00F0) >> 4;
@@ -280,12 +286,12 @@ public:
             switch (opcode & 0x00FF) {
             case 0x009E: // Ex9E - SKP Vx
                 x = (opcode & 0x0F00) >> 8;
-                pc += keypad[(V[x] & 0x0F)] ? 4 : 2;
+                pc += keypad[V[x]] ? 4 : 2;
                 break;
 
             case 0x00A1: // ExA1 - SKNP Vx
                 x = (opcode & 0x0F00) >> 8;
-                pc += keypad[(V[x] & 0x0F)] ? 2 : 4;
+                pc += keypad[V[x]] ? 2 : 4;
                 break;
 
             default:
@@ -332,7 +338,7 @@ public:
 
             case 0x0029: // Fx29 - LD F, Vx
                 x = (opcode & 0x0F00) >> 8;
-                I = V[x] * 5;
+                I = V[x] * 0x5;
                 pc += 2;
                 break;
 

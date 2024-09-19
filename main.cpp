@@ -70,6 +70,8 @@ int main(int argc, char* argv[]) {
     // chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
     // chip8.loadRom("15 Puzzle [Roger Ivie].ch8");
     // chip8.loadRom("Animal Race [Brian Astle].ch8");
+    // chip8.loadRom("BRIX.ch8");
+    // chip8.loadRom("INVADERS.ch8");
     chip8.loadRom("test_opcode.ch8");
 
     bool running = true;
@@ -114,7 +116,7 @@ int main(int argc, char* argv[]) {
             }
         }
         SDL_RenderPresent(renderer);
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(17));
     }
 
     SDL_DestroyWindow(window);
