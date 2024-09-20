@@ -6,8 +6,9 @@ LDFLAGS = `sdl2-config --libs`
 # Define the target executable
 TARGET = chip8-emulator
 
-# Define source files
+# Define source and header files
 SRCS = main.cpp chip8.cpp
+HEADERS = chip8.h
 
 # Define object files
 OBJS = $(SRCS:.cpp=.o)
@@ -21,7 +22,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
 # Rule to compile source files into object files
-%.o: %.cpp
+%.o: %.cpp $(HEADERS)
 	@echo "Compiling $<"
 	$(CC) $(CFLAGS) -c $< -o $@
 

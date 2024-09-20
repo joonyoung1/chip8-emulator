@@ -1,4 +1,4 @@
-#include "chip8.cpp"
+#include "chip8.h"
 #include <SDL2/SDL.h>
 #include <chrono>
 #include <iostream>
