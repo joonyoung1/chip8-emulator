@@ -309,6 +309,7 @@ public:
                 break;
 
             case 0x000A: // Fx0A - LD Vx, K
+                x = (opcode & 0x0F00) >> 8;
                 for (int i = 0; i < 16; i++) {
                     if (keypad[i]) {
                         V[x] = i;
