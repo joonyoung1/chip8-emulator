@@ -19,6 +19,9 @@ public:
     std::bitset<64 * 32> display;
     std::bitset<16> keypad;
 
+    std::mt19937 rng;
+    std::uniform_int_distribution<int> dist{0, 255};
+
     const uint8_t fontset[80] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -59,6 +62,8 @@ public:
         for (int i = 0; i < 80; i++) {
             memory[i] = fontset[i];
         }
+
+        rng = std::mt19937(std::random_device{}());
     }
 
     void loadRom(std::string filename) {
@@ -81,8 +86,8 @@ public:
         uint8_t y = (opcode & 0x00F0) >> 4;
         uint16_t kk = opcode & 0x00FF;
 
-        std::mt19937 rng(std::random_device{}());
-        std::uniform_int_distribution<int> dist(0, 255);
+        // std::cout << "PC : 0x" << std::hex << pc << std::endl;
+        // std::cout << "Opcode : 0x" << std::hex << opcode << std::endl;
 
         switch (opcode & 0xF000) {
             case 0x0000:
@@ -213,6 +218,7 @@ public:
                 break;
 
             case 0xD000: // Dxyn - DRW Vx, Vy, nibble
+                V[0xF] = 0;
                 for (int spriteY = 0; spriteY < (opcode & 0x000F); spriteY++) {
                     uint8_t spriteByte = memory[I + spriteY];
 
@@ -313,5 +319,10 @@ public:
             delayTimer--;
         if (soundTimer > 0)
             soundTimer--;
+
+        // for (int i = 0; i < 16; i++) {
+        //     std::cout << std::dec << "V[" << i
+        //               << "] : " << static_cast<int>(V[i]) << std::endl;
+        // }
     }
 };
