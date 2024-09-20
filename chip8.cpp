@@ -85,26 +85,23 @@ public:
         uint8_t x = (opcode & 0x0F00) >> 8;
         uint8_t y = (opcode & 0x00F0) >> 4;
         uint16_t kk = opcode & 0x00FF;
-
-        // std::cout << "PC : 0x" << std::hex << pc << std::endl;
-        // std::cout << "Opcode : 0x" << std::hex << opcode << std::endl;
+        pc += 2;
 
         switch (opcode & 0xF000) {
             case 0x0000:
                 switch (opcode) {
                     case 0x00E0: // 00E0 - CLS
                         display.reset();
-                        pc += 2;
                         break;
 
                     case 0x00EE: // ooEE - RET
                         sp--;
                         pc = stack[sp];
-                        pc += 2;
                         break;
 
                     default:
-                        pc += 2;
+                        std::cerr << std::hex << "Unknown Opcode : 0x" << opcode
+                                  << std::endl;
                         break;
                 }
                 break;
@@ -120,77 +117,74 @@ public:
                 break;
 
             case 0x3000: // 3xkk - SE Vx, byte
-                pc += (V[x] == kk) ? 4 : 2;
+                if (V[x] == kk)
+                    pc += 2;
                 break;
 
             case 0x4000: // 4xkk - SNE Vx, byte
-                pc += (V[x] != kk) ? 4 : 2;
+                if (V[x] != kk)
+                    pc += 2;
                 break;
 
             case 0x5000: // 5xy0 - SE Vx, Vy
-                pc += (V[x] == V[y]) ? 4 : 2;
+                if (V[x] == V[y])
+                    pc += 2;
                 break;
 
             case 0x6000: // 6xkk - LD Vx, byte
                 V[x] = kk;
-                pc += 2;
                 break;
 
             case 0x7000: // 7xkk - ADD Vx, byte
                 V[x] += kk;
-                pc += 2;
                 break;
 
             case 0x8000:
                 switch (opcode & 0x000F) {
                     case 0x0000: // 8xy0 - LD Vx, Vy
                         V[x] = V[y];
-                        pc += 2;
                         break;
 
                     case 0x0001: // 8xy1 - OR Vx, Vy
                         V[x] |= V[y];
-                        pc += 2;
+                        // V[0xF] = 0;
                         break;
 
                     case 0x0002: // 8xy2 - AND Vx, Vy
                         V[x] &= V[y];
-                        pc += 2;
+                        // V[0xF] = 0;
                         break;
 
                     case 0x0003: // 8xy3 - XOR Vx, Vy
                         V[x] ^= V[y];
-                        pc += 2;
+                        // V[0xF] = 0;
                         break;
 
                     case 0x0004: // 8xy4 - ADD Vx, Vy
+                        V[0xF] = (V[x] + V[y] > 0xFF) ? 1 : 0;
                         V[x] += V[y];
-                        V[0xF] = (V[x] < V[y]) ? 1 : 0;
-                        pc += 2;
                         break;
 
                     case 0x0005: // 8xy5 - SUB Vx, Vy
-                        V[0xF] = (V[x] > V[y]) ? 1 : 0;
+                        V[0xF] = (V[x] < V[y]) ? 0 : 1;
                         V[x] -= V[y];
-                        pc += 2;
                         break;
 
                     case 0x0006: // 8xy6 - SHR Vx {, Vy}
+                        V[x] = V[y];
                         V[0xF] = V[x] & 0x1;
                         V[x] >>= 1;
-                        pc += 2;
                         break;
 
                     case 0x0007: // 8xy7 - SUBN Vx {, Vy}
-                        V[0xF] = (V[x] < V[y]) ? 1 : 0;
+                        V[0xF] = (V[x] > V[y]) ? 0 : 1;
                         V[x] = V[y] - V[x];
-                        pc += 2;
                         break;
 
                     case 0x000E: // 8xyE - SHL Vx {, Vy}
+                        V[x] = V[y];
                         V[0xF] = V[x] >> 7;
                         V[x] <<= 1;
-                        pc += 2;
                         break;
 
                     default:
@@ -199,13 +193,13 @@ public:
                 }
                 break;
 
-            case 0x9000: // 9xy0 - SNE Vx, Vy
-                pc += (V[x] != V[y]) ? 4 : 2;
+            case 0x9000: // 9xy0 - SNE Vx, V
+                if (V[x] != V[y])
+                    pc += 2;
                 break;
 
             case 0xA000: // Annn - LD I, addr
                 I = addr;
-                pc += 2;
                 break;
 
             case 0xB000: // Bnnn - JP V0, addr
@@ -214,7 +208,6 @@ public:
 
             case 0xC000: // Cxkk - RND Vx, byte
                 V[x] = dist(rng) & kk;
-                pc += 2;
                 break;
 
             case 0xD000: // Dxyn - DRW Vx, Vy, nibble
@@ -234,21 +227,23 @@ public:
                         }
                     }
                 }
-                pc += 2;
                 break;
 
             case 0xE000:
                 switch (opcode & 0x00FF) {
                     case 0x009E: // Ex9E - SKP Vx
-                        pc += keypad[V[x]] ? 4 : 2;
+                        if (keypad[V[x]])
+                            pc += 2;
                         break;
 
                     case 0x00A1: // ExA1 - SKNP Vx
-                        pc += keypad[V[x]] ? 2 : 4;
+                        if (!keypad[V[x]])
+                            pc += 2;
                         break;
 
                     default:
-                        pc += 2;
+                        std::cerr << std::hex << "Unknown Opcode : 0x" << opcode
+                                  << std::endl;
                         break;
                 }
                 break;
@@ -257,60 +252,63 @@ public:
                 switch (opcode & 0x00FF) {
                     case 0x0007: // Fx07 - LD Vx, DT
                         V[x] = delayTimer;
-                        pc += 2;
                         break;
 
                     case 0x000A: // Fx0A - LD Vx, K
+                    {
+                        bool pressed = false;
                         for (int i = 0; i < 16; i++) {
                             if (keypad[i]) {
                                 V[x] = i;
-                                pc += 2;
+                                pressed = true;
                                 break;
                             }
                         }
+
+                        if (!pressed)
+                            pc -= 2;
+
                         break;
+                    }
 
                     case 0x0015: // Fx15 - LD DT, Vx
                         delayTimer = V[x];
-                        pc += 2;
                         break;
 
                     case 0x0018: // Fx18 - LD ST, Vx
                         soundTimer = V[x];
-                        pc += 2;
                         break;
 
                     case 0x001E: // Fx1E - ADD I, Vx
+                        // V[0xF] = (I + V[x] > 0xFFF) ? 1 : 0;
                         I += V[x];
-                        pc += 2;
                         break;
 
                     case 0x0029: // Fx29 - LD F, Vx
                         I = V[x] * 0x5;
-                        pc += 2;
                         break;
 
                     case 0x0033: // Fx33 - LD B, Vx
                         memory[I] = V[x] / 100;
                         memory[I + 1] = (V[x] / 10) % 10;
                         memory[I + 2] = V[x] % 10;
-                        pc += 2;
                         break;
 
                     case 0x0055: // Fx55 - LD [I], Vx
                         for (int i = 0; i <= x; i++)
                             memory[I + i] = V[i];
-                        pc += 2;
+                        I += x + 1;
                         break;
 
                     case 0x0065: // Fx65 - LD Vx, [I]
                         for (int i = 0; i <= x; i++)
                             V[i] = memory[I + i];
-                        pc += 2;
+                        I += x + 1;
                         break;
 
                     default:
-                        pc += 2;
+                        std::cerr << std::hex << "Unknown Opcode : 0x" << opcode
+                                  << std::endl;
                         break;
                 }
         }
@@ -319,10 +317,5 @@ public:
             delayTimer--;
         if (soundTimer > 0)
             soundTimer--;
-
-        // for (int i = 0; i < 16; i++) {
-        //     std::cout << std::dec << "V[" << i
-        //               << "] : " << static_cast<int>(V[i]) << std::endl;
-        // }
     }
 };
