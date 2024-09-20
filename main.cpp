@@ -70,12 +70,11 @@ int main(int argc, char* argv[]) {
     // chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
     // chip8.loadRom("15 Puzzle [Roger Ivie].ch8");
     // chip8.loadRom("Animal Race [Brian Astle].ch8");
-    // chip8.loadRom("BRIX.ch8");
+    chip8.loadRom("BRIX.ch8");
     // chip8.loadRom("INVADERS.ch8");
-    chip8.loadRom("test_opcode.ch8");
+    // chip8.loadRom("test_opcode.ch8");
 
     bool running = true;
-    int temp;
     SDL_Event event;
 
     while (running) {
@@ -86,6 +85,7 @@ int main(int argc, char* argv[]) {
                 auto it = keyMap.find(event.key.keysym.sym);
                 if (it != keyMap.end()) {
                     chip8.keypad[it->second] = true;
+                    std::cout << it->second << " pressed!" << std::endl;
                 }
             } else if (event.type == SDL_KEYUP) {
                 auto it = keyMap.find(event.key.keysym.sym);
@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 1; i++) {
             chip8.run();
         }
 
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
             }
         }
         SDL_RenderPresent(renderer);
-        std::this_thread::sleep_for(std::chrono::milliseconds(17));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     SDL_DestroyWindow(window);

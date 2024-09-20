@@ -1,6 +1,6 @@
 # Define compiler and flags
 CC = g++
-CFLAGS = -g `sdl2-config --cflags` 
+CFLAGS = -g -Wall `sdl2-config --cflags`
 LDFLAGS = `sdl2-config --libs`
 
 # Define the target executable
@@ -17,10 +17,12 @@ all: $(TARGET)
 
 # Rule to build the target executable
 $(TARGET): $(OBJS)
+	@echo "Linking $@"
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
 # Rule to compile source files into object files
 %.o: %.cpp
+	@echo "Compiling $<"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Clean rule to remove object files and executable
