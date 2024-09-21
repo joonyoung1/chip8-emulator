@@ -38,7 +38,7 @@ void Chip8::loadRom(std::string filename) {
     file.close();
 }
 
-void Chip8::run() {
+void Chip8::runCycle() {
     uint16_t opcode = memory[pc] << 8 | memory[pc + 1];
     uint16_t addr = opcode & 0x0FFF;
     uint8_t x = (opcode & 0x0F00) >> 8;
@@ -51,6 +51,7 @@ void Chip8::run() {
             switch (opcode) {
                 case 0x00E0: // 00E0 - CLS
                     display.reset();
+                    drawFlag = true;
                     break;
 
                 case 0x00EE: // ooEE - RET
@@ -106,17 +107,14 @@ void Chip8::run() {
 
                 case 0x0001: // 8xy1 - OR Vx, Vy
                     V[x] |= V[y];
-                    // V[0xF] = 0;
                     break;
 
                 case 0x0002: // 8xy2 - AND Vx, Vy
                     V[x] &= V[y];
-                    // V[0xF] = 0;
                     break;
 
                 case 0x0003: // 8xy3 - XOR Vx, Vy
                     V[x] ^= V[y];
-                    // V[0xF] = 0;
                     break;
 
                 case 0x0004: // 8xy4 - ADD Vx, Vy
@@ -186,6 +184,7 @@ void Chip8::run() {
                     }
                 }
             }
+            drawFlag = true;
             break;
 
         case 0xE000:
@@ -271,9 +270,29 @@ void Chip8::run() {
                     break;
             }
     }
+}
 
+void Chip8::decrementTimers() {
     if (delayTimer > 0)
         delayTimer--;
-    if (soundTimer > 0)
+    if (soundTimer > 0) {
         soundTimer--;
+        soundFlag = true;
+    }
+}
+
+bool Chip8::getDrawFlag() {
+    return drawFlag;
+}
+
+void Chip8::setDrawFlag(bool drawFlag) {
+    this->drawFlag = drawFlag;
+}
+
+bool Chip8::getSoundFlag() {
+    return soundFlag;
+}
+
+void Chip8::setSoundFlag(bool soundFlag) {
+    this->soundFlag = soundFlag;
 }

@@ -1,11 +1,20 @@
 #include "chip8.h"
 #include <SDL2/SDL.h>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <map>
 #include <thread>
 
 std::map<SDL_Keycode, int> keyMap;
+
+const int DISPLAY_WIDTH = 64;
+const int DISPLAY_HEIGHT = 32;
+const int WINDOW_SCALE = 10;
+
+std::atomic<bool> running{true};
+
+Chip8 chip8;
 
 void initializeKeyMap() {
     keyMap[SDLK_1] = 0x1;
@@ -25,10 +34,6 @@ void initializeKeyMap() {
     keyMap[SDLK_c] = 0xB;
     keyMap[SDLK_v] = 0xF;
 }
-
-const int DISPLAY_WIDTH = 64;
-const int DISPLAY_HEIGHT = 32;
-const int WINDOW_SCALE = 10;
 
 bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -58,6 +63,23 @@ bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
     return true;
 }
 
+void cpuThread() {
+    const int CPU_SPEED = 1000;
+    const int CPU_INTERVAL_US = 1000000 / CPU_SPEED;
+
+    while (running) {
+        auto start = std::chrono::high_resolution_clock::now();
+        chip8.runCycle();
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::micro> elapsed = end - start;
+
+        int sleepTime = CPU_INTERVAL_US - static_cast<int>(elapsed.count());
+        if (sleepTime > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
@@ -66,7 +88,6 @@ int main(int argc, char* argv[]) {
         return 1;
     initializeKeyMap();
 
-    Chip8 chip8;
     // chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
     // chip8.loadRom("15 Puzzle [Roger Ivie].ch8");
     chip8.loadRom("Animal Race [Brian Astle].ch8");
@@ -76,10 +97,15 @@ int main(int argc, char* argv[]) {
     // chip8.loadRom("test_opcode.ch8");
     // chip8.loadRom("bc_test.ch8");
 
-    bool running = true;
+    std::thread cpu(cpuThread);
+
     SDL_Event event;
+    const int TARGET_FPS = 60;
+    const int FRAME_DURATION_US = 1000000 / TARGET_FPS;
 
     while (running) {
+        auto frameStart = std::chrono::high_resolution_clock::now();
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
@@ -96,30 +122,42 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        for (int i = 0; i < 1; i++) {
-            chip8.run();
-        }
+        chip8.decrementTimers();
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+        if (chip8.getDrawFlag()) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        for (int y = 0; y < DISPLAY_HEIGHT; y++) {
-            for (int x = 0; x < DISPLAY_WIDTH; x++) {
-                if (chip8.display[y * DISPLAY_WIDTH + x]) {
-                    SDL_Rect pixelRect;
-                    pixelRect.x = x * WINDOW_SCALE;
-                    pixelRect.y = y * WINDOW_SCALE;
-                    pixelRect.w = WINDOW_SCALE;
-                    pixelRect.h = WINDOW_SCALE;
-                    SDL_RenderFillRect(renderer, &pixelRect);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+                for (int x = 0; x < DISPLAY_WIDTH; x++) {
+                    if (chip8.display[y * DISPLAY_WIDTH + x]) {
+                        SDL_Rect pixelRect;
+                        pixelRect.x = x * WINDOW_SCALE;
+                        pixelRect.y = y * WINDOW_SCALE;
+                        pixelRect.w = WINDOW_SCALE;
+                        pixelRect.h = WINDOW_SCALE;
+                        SDL_RenderFillRect(renderer, &pixelRect);
+                    }
                 }
             }
+            SDL_RenderPresent(renderer);
+
+            chip8.setDrawFlag(false);
         }
-        SDL_RenderPresent(renderer);
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        auto frameEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::micro> frameElapsed =
+            frameEnd - frameStart;
+
+        int sleepTime =
+            FRAME_DURATION_US - static_cast<int>(frameElapsed.count());
+        if (sleepTime > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+        }
     }
 
+    cpu.join();
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();

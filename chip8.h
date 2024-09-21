@@ -22,6 +22,9 @@ public:
     std::mt19937 rng;
     std::uniform_int_distribution<int> dist{0, 255};
 
+    bool drawFlag = false;
+    bool soundFlag = false;
+
     const uint8_t fontset[80] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -45,5 +48,11 @@ public:
 
     void initialize();
     void loadRom(std::string filename);
-    void run();
+    void runCycle();
+    void decrementTimers();
+
+    bool getDrawFlag();
+    void setDrawFlag(bool drawFlag);
+    bool getSoundFlag();
+    void setSoundFlag(bool soundFlag);
 };
