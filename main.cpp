@@ -9,8 +9,13 @@
 const int DISPLAY_WIDTH = 64;
 const int DISPLAY_HEIGHT = 32;
 const int WINDOW_SCALE = 10;
-const int IPS = 1000;
+
+const int IPS = 500;
 const int FPS = 60;
+
+const int SAMPLE_RATE = 44100;
+const int AMPLITUDE = 28000;
+const double BEEP_FREQUENCY = 440.0;
 
 std::map<SDL_Keycode, int> keyMap;
 std::atomic<bool> running{true};
@@ -23,9 +28,37 @@ void initializeKeyMap() {
               {SDLK_z, 0xA}, {SDLK_x, 0x0}, {SDLK_c, 0xB}, {SDLK_v, 0xF}};
 }
 
+void audioCallback(void* userdata, Uint8* stream, int len) {
+    Sint16* buffer = reinterpret_cast<Sint16*>(stream);
+    int samples = len / sizeof(Sint16);
+
+    static double phase = 0.0;
+
+    for (int i = 0; i < samples; ++i) {
+        buffer[i] = static_cast<Sint16>(AMPLITUDE * sin(phase));
+        phase += (2.0 * M_PI * BEEP_FREQUENCY) / SAMPLE_RATE;
+        if (phase >= 2.0 * M_PI)
+            phase -= 2.0 * M_PI;
+    }
+}
+
 bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
+        return false;
+    }
+
+    SDL_AudioSpec audioSpec;
+    audioSpec.freq = SAMPLE_RATE;
+    audioSpec.format = AUDIO_S16SYS;
+    audioSpec.channels = 1;
+    audioSpec.samples = 2048;
+    audioSpec.callback = audioCallback;
+    audioSpec.userdata = nullptr;
+
+    if (SDL_OpenAudio(&audioSpec, nullptr) < 0) {
+        std::cerr << "SDL_OpenAudio Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
         return false;
     }
 
@@ -111,6 +144,13 @@ void mainLoop(SDL_Renderer* renderer) {
         if (chip8.getDrawFlag()) {
             renderDisplay(renderer);
             chip8.setDrawFlag(false);
+        }
+
+        if (chip8.getSoundFlag()) {
+            SDL_PauseAudio(0);
+            chip8.setSoundFlag(false);
+        } else {
+            SDL_PauseAudio(1);
         }
 
         auto frameEnd = std::chrono::high_resolution_clock::now();
