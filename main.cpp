@@ -1,34 +1,27 @@
 #include "chip8.h"
 #include <SDL2/SDL.h>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <map>
 #include <thread>
 
-std::map<SDL_Keycode, int> keyMap;
-
-void initializeKeyMap() {
-    keyMap[SDLK_1] = 0x1;
-    keyMap[SDLK_2] = 0x2;
-    keyMap[SDLK_3] = 0x3;
-    keyMap[SDLK_4] = 0xC;
-    keyMap[SDLK_q] = 0x4;
-    keyMap[SDLK_w] = 0x5;
-    keyMap[SDLK_e] = 0x6;
-    keyMap[SDLK_r] = 0xD;
-    keyMap[SDLK_a] = 0x7;
-    keyMap[SDLK_s] = 0x8;
-    keyMap[SDLK_d] = 0x9;
-    keyMap[SDLK_f] = 0xE;
-    keyMap[SDLK_z] = 0xA;
-    keyMap[SDLK_x] = 0x0;
-    keyMap[SDLK_c] = 0xB;
-    keyMap[SDLK_v] = 0xF;
-}
-
 const int DISPLAY_WIDTH = 64;
 const int DISPLAY_HEIGHT = 32;
 const int WINDOW_SCALE = 10;
+const int IPS = 1000;
+const int FPS = 60;
+
+std::map<SDL_Keycode, int> keyMap;
+std::atomic<bool> running{true};
+Chip8 chip8;
+
+void initializeKeyMap() {
+    keyMap = {{SDLK_1, 0x1}, {SDLK_2, 0x2}, {SDLK_3, 0x3}, {SDLK_4, 0xC},
+              {SDLK_q, 0x4}, {SDLK_w, 0x5}, {SDLK_e, 0x6}, {SDLK_r, 0xD},
+              {SDLK_a, 0x7}, {SDLK_s, 0x8}, {SDLK_d, 0x9}, {SDLK_f, 0xE},
+              {SDLK_z, 0xA}, {SDLK_x, 0x0}, {SDLK_c, 0xB}, {SDLK_v, 0xF}};
+}
 
 bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -40,14 +33,14 @@ bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
         SDL_CreateWindow("Chip-8 Emulator", SDL_WINDOWPOS_UNDEFINED,
                          SDL_WINDOWPOS_UNDEFINED, DISPLAY_WIDTH * WINDOW_SCALE,
                          DISPLAY_HEIGHT * WINDOW_SCALE, SDL_WINDOW_SHOWN);
-    if (window == nullptr) {
+    if (!window) {
         std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
         SDL_Quit();
         return false;
     }
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (renderer == nullptr) {
+    if (!renderer) {
         std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError()
                   << std::endl;
         SDL_DestroyWindow(window);
@@ -58,6 +51,79 @@ bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
     return true;
 }
 
+void cpuThread() {
+    const int INTERVAL_US = 1000000 / IPS;
+
+    while (running) {
+        auto start = std::chrono::high_resolution_clock::now();
+        chip8.runCycle();
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::micro> elapsed = end - start;
+
+        int sleepTime = INTERVAL_US - static_cast<int>(elapsed.count());
+        if (sleepTime > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+        }
+    }
+}
+
+void handleInput(SDL_Event& event) {
+    if (event.type == SDL_QUIT) {
+        running = false;
+    } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+        auto it = keyMap.find(event.key.keysym.sym);
+        if (it != keyMap.end()) {
+            chip8.keypad[it->second] = (event.type == SDL_KEYDOWN);
+        }
+    }
+}
+
+void renderDisplay(SDL_Renderer* renderer) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    for (int y = 0; y < DISPLAY_HEIGHT; ++y) {
+        for (int x = 0; x < DISPLAY_WIDTH; ++x) {
+            if (chip8.display[y * DISPLAY_WIDTH + x]) {
+                SDL_Rect pixelRect = {x * WINDOW_SCALE, y * WINDOW_SCALE,
+                                      WINDOW_SCALE, WINDOW_SCALE};
+                SDL_RenderFillRect(renderer, &pixelRect);
+            }
+        }
+    }
+    SDL_RenderPresent(renderer);
+}
+
+void mainLoop(SDL_Renderer* renderer) {
+    SDL_Event event;
+    const int INTERVAL_US = 1000000 / FPS;
+
+    while (running) {
+        auto frameStart = std::chrono::high_resolution_clock::now();
+
+        while (SDL_PollEvent(&event)) {
+            handleInput(event);
+        }
+
+        chip8.decrementTimers();
+
+        if (chip8.getDrawFlag()) {
+            renderDisplay(renderer);
+            chip8.setDrawFlag(false);
+        }
+
+        auto frameEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::micro> frameElapsed =
+            frameEnd - frameStart;
+
+        int sleepTime = INTERVAL_US - static_cast<int>(frameElapsed.count());
+        if (sleepTime > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
@@ -66,60 +132,13 @@ int main(int argc, char* argv[]) {
         return 1;
     initializeKeyMap();
 
-    Chip8 chip8;
-    // chip8.loadRom("Maze (alt) [David Winter, 199x].ch8");
-    // chip8.loadRom("15 Puzzle [Roger Ivie].ch8");
     chip8.loadRom("Animal Race [Brian Astle].ch8");
-    // chip8.loadRom("IBM Logo.ch8");
-    // chip8.loadRom("BRIX.ch8");
     // chip8.loadRom("INVADERS.ch8");
-    // chip8.loadRom("test_opcode.ch8");
-    // chip8.loadRom("bc_test.ch8");
 
-    bool running = true;
-    SDL_Event event;
+    std::thread cpu(cpuThread);
+    mainLoop(renderer);
 
-    while (running) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = false;
-            } else if (event.type == SDL_KEYDOWN) {
-                auto it = keyMap.find(event.key.keysym.sym);
-                if (it != keyMap.end()) {
-                    chip8.keypad[it->second] = true;
-                }
-            } else if (event.type == SDL_KEYUP) {
-                auto it = keyMap.find(event.key.keysym.sym);
-                if (it != keyMap.end()) {
-                    chip8.keypad[it->second] = false;
-                }
-            }
-        }
-
-        for (int i = 0; i < 1; i++) {
-            chip8.run();
-        }
-
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        for (int y = 0; y < DISPLAY_HEIGHT; y++) {
-            for (int x = 0; x < DISPLAY_WIDTH; x++) {
-                if (chip8.display[y * DISPLAY_WIDTH + x]) {
-                    SDL_Rect pixelRect;
-                    pixelRect.x = x * WINDOW_SCALE;
-                    pixelRect.y = y * WINDOW_SCALE;
-                    pixelRect.w = WINDOW_SCALE;
-                    pixelRect.h = WINDOW_SCALE;
-                    SDL_RenderFillRect(renderer, &pixelRect);
-                }
-            }
-        }
-        SDL_RenderPresent(renderer);
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
+    cpu.join();
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();
