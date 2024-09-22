@@ -1,7 +1,4 @@
 #include <bitset>
-#include <cstring>
-#include <fstream>
-#include <iostream>
 #include <random>
 
 class Chip8 {

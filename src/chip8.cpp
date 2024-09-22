@@ -1,5 +1,9 @@
 #include "chip8.h"
 
+#include <cstring>
+#include <fstream>
+#include <iostream>
+
 Chip8::Chip8() {
     initialize();
 }

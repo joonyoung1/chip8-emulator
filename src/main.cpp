@@ -1,9 +1,11 @@
 #include "chip8.h"
+
 #include <SDL2/SDL.h>
 #include <atomic>
 #include <chrono>
 #include <iostream>
 #include <map>
+#include <set>
 #include <thread>
 
 const int DISPLAY_WIDTH = 64;
@@ -17,16 +19,13 @@ const int SAMPLE_RATE = 44100;
 const int AMPLITUDE = 28000;
 const double BEEP_FREQUENCY = 440.0;
 
-std::map<SDL_Keycode, int> keyMap;
+std::map<SDL_Keycode, int> keyMap = {
+    {SDLK_1, 0x1}, {SDLK_2, 0x2}, {SDLK_3, 0x3}, {SDLK_4, 0xC},
+    {SDLK_q, 0x4}, {SDLK_w, 0x5}, {SDLK_e, 0x6}, {SDLK_r, 0xD},
+    {SDLK_a, 0x7}, {SDLK_s, 0x8}, {SDLK_d, 0x9}, {SDLK_f, 0xE},
+    {SDLK_z, 0xA}, {SDLK_x, 0x0}, {SDLK_c, 0xB}, {SDLK_v, 0xF}};
 std::atomic<bool> running{true};
 Chip8 chip8;
-
-void initializeKeyMap() {
-    keyMap = {{SDLK_1, 0x1}, {SDLK_2, 0x2}, {SDLK_3, 0x3}, {SDLK_4, 0xC},
-              {SDLK_q, 0x4}, {SDLK_w, 0x5}, {SDLK_e, 0x6}, {SDLK_r, 0xD},
-              {SDLK_a, 0x7}, {SDLK_s, 0x8}, {SDLK_d, 0x9}, {SDLK_f, 0xE},
-              {SDLK_z, 0xA}, {SDLK_x, 0x0}, {SDLK_c, 0xB}, {SDLK_v, 0xF}};
-}
 
 void audioCallback(void* userdata, Uint8* stream, int len) {
     Sint16* buffer = reinterpret_cast<Sint16*>(stream);
@@ -165,15 +164,49 @@ void mainLoop(SDL_Renderer* renderer) {
 }
 
 int main(int argc, char* argv[]) {
+    std::string file;
+    std::set<std::string> options;
+    std::string fontLocation;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (arg == "-h" || arg == "--help") {
+            std::cout << "Usage: ./program <file_path> [-h|--help] [-f "
+                         "location] [-s] [-v]\n";
+            return 0;
+        } else if (arg == "-f") {
+            if (i + 1 >= argc) {
+                std::cerr << "Error: No valid memory address provided."
+                          << std::endl;
+                return 1;
+            }
+            fontLocation = argv[++i];
+        } else if (arg[0] == '-') {
+            for (size_t j = 1; j < arg.size(); ++j) {
+                options.insert("-" + std::string(1, arg[j]));
+            }
+        } else {
+            file = argv[i];
+        }
+    }
+
+    if (file.empty()) {
+        std::cerr << "Error: No valid rom file path provided." << std::endl;
+        return 1;
+    }
+
+    for (const auto& opt : options) {
+        std::cout << "Options: " << opt << std::endl;
+    }
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
 
     if (!initializeSDL(window, renderer))
         return 1;
-    initializeKeyMap();
 
-    chip8.loadRom("Animal Race [Brian Astle].ch8");
-    // chip8.loadRom("INVADERS.ch8");
+    chip8.loadRom(file);
 
     std::thread cpu(cpuThread);
     mainLoop(renderer);
