@@ -4,7 +4,8 @@
 #include <fstream>
 #include <iostream>
 
-Chip8::Chip8() {
+Chip8::Chip8(uint16_t fontAddr)
+    : fontAddr(fontAddr) {
     initialize();
 }
 
@@ -23,7 +24,7 @@ void Chip8::initialize() {
     soundTimer = 0;
 
     for (int i = 0; i < 80; i++) {
-        memory[i] = fontset[i];
+        memory[fontAddr + i] = fontset[i];
     }
 
     rng = std::mt19937(std::random_device{}());

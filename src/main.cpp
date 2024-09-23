@@ -25,7 +25,6 @@ std::map<SDL_Keycode, int> keyMap = {
     {SDLK_a, 0x7}, {SDLK_s, 0x8}, {SDLK_d, 0x9}, {SDLK_f, 0xE},
     {SDLK_z, 0xA}, {SDLK_x, 0x0}, {SDLK_c, 0xB}, {SDLK_v, 0xF}};
 std::atomic<bool> running{true};
-Chip8 chip8;
 
 void audioCallback(void* userdata, Uint8* stream, int len) {
     Sint16* buffer = reinterpret_cast<Sint16*>(stream);
@@ -83,7 +82,7 @@ bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
     return true;
 }
 
-void cpuThread() {
+void cpuThread(Chip8& chip8) {
     const int INTERVAL_US = 1000000 / IPS;
 
     while (running) {
@@ -99,7 +98,7 @@ void cpuThread() {
     }
 }
 
-void handleInput(SDL_Event& event) {
+void handleInput(Chip8& chip8, SDL_Event& event) {
     if (event.type == SDL_QUIT) {
         running = false;
     } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
@@ -110,7 +109,7 @@ void handleInput(SDL_Event& event) {
     }
 }
 
-void renderDisplay(SDL_Renderer* renderer) {
+void renderDisplay(Chip8& chip8, SDL_Renderer* renderer) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
@@ -127,7 +126,7 @@ void renderDisplay(SDL_Renderer* renderer) {
     SDL_RenderPresent(renderer);
 }
 
-void mainLoop(SDL_Renderer* renderer) {
+void mainLoop(Chip8& chip8, SDL_Renderer* renderer) {
     SDL_Event event;
     const int INTERVAL_US = 1000000 / FPS;
 
@@ -135,13 +134,13 @@ void mainLoop(SDL_Renderer* renderer) {
         auto frameStart = std::chrono::high_resolution_clock::now();
 
         while (SDL_PollEvent(&event)) {
-            handleInput(event);
+            handleInput(chip8, event);
         }
 
         chip8.decrementTimers();
 
         if (chip8.getDrawFlag()) {
-            renderDisplay(renderer);
+            renderDisplay(chip8, renderer);
             chip8.setDrawFlag(false);
         }
 
@@ -166,7 +165,7 @@ void mainLoop(SDL_Renderer* renderer) {
 int main(int argc, char* argv[]) {
     std::string file;
     std::set<std::string> options;
-    std::string fontLocation;
+    uint16_t fontAddr;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -181,7 +180,12 @@ int main(int argc, char* argv[]) {
                           << std::endl;
                 return 1;
             }
-            fontLocation = argv[++i];
+
+            std::string fontArg = argv[++i];
+            int base =
+                (fontArg.find_first_of("xX") != std::string::npos) ? 16 : 10;
+            fontAddr = std::stoi(fontArg, nullptr, base);
+
         } else if (arg[0] == '-') {
             for (size_t j = 1; j < arg.size(); ++j) {
                 options.insert("-" + std::string(1, arg[j]));
@@ -200,6 +204,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Options: " << opt << std::endl;
     }
 
+    Chip8 chip8 = Chip8(fontAddr);
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
 
@@ -208,8 +214,8 @@ int main(int argc, char* argv[]) {
 
     chip8.loadRom(file);
 
-    std::thread cpu(cpuThread);
-    mainLoop(renderer);
+    std::thread cpu(cpuThread, std::ref(chip8));
+    mainLoop(chip8, renderer);
 
     cpu.join();
     SDL_DestroyWindow(window);
