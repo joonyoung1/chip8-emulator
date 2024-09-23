@@ -1,6 +1,13 @@
 #include <bitset>
 #include <random>
 
+struct Chip8Params {
+    uint16_t fontAddr = 0x0;
+    bool option_1 = false;
+    bool option_2 = false;
+    bool option_3 = false;
+};
+
 class Chip8 {
 public:
     uint8_t memory[4096];
@@ -43,7 +50,7 @@ public:
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
     };
 
-    Chip8(uint16_t fontAddr = 0x0);
+    Chip8(const Chip8Params& chip8Params);
 
     void initialize();
     void loadRom(std::string filename);

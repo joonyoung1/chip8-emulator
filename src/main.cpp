@@ -165,7 +165,7 @@ void mainLoop(Chip8& chip8, SDL_Renderer* renderer) {
 int main(int argc, char* argv[]) {
     std::string file;
     std::set<std::string> options;
-    uint16_t fontAddr;
+    Chip8Params chip8Params;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
             std::string fontArg = argv[++i];
             int base =
                 (fontArg.find_first_of("xX") != std::string::npos) ? 16 : 10;
-            fontAddr = std::stoi(fontArg, nullptr, base);
+            chip8Params.fontAddr = std::stoi(fontArg, nullptr, base);
 
         } else if (arg[0] == '-') {
             for (size_t j = 1; j < arg.size(); ++j) {
@@ -204,7 +204,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Options: " << opt << std::endl;
     }
 
-    Chip8 chip8 = Chip8(fontAddr);
+    Chip8 chip8 = Chip8(chip8Params);
 
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;

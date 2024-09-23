@@ -4,8 +4,8 @@
 #include <fstream>
 #include <iostream>
 
-Chip8::Chip8(uint16_t fontAddr)
-    : fontAddr(fontAddr) {
+Chip8::Chip8(const Chip8Params& chip8Params)
+    : fontAddr(chip8Params.fontAddr) {
     initialize();
 }
 
