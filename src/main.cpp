@@ -164,7 +164,6 @@ void mainLoop(Chip8& chip8, SDL_Renderer* renderer) {
 
 int main(int argc, char* argv[]) {
     std::string file;
-    std::set<std::string> options;
     Chip8Params chip8Params;
 
     for (int i = 1; i < argc; ++i) {
@@ -188,7 +187,17 @@ int main(int argc, char* argv[]) {
 
         } else if (arg[0] == '-') {
             for (size_t j = 1; j < arg.size(); ++j) {
-                options.insert("-" + std::string(1, arg[j]));
+                switch (arg[j]) {
+                    case 's':
+                        chip8Params.shiftVy = true;
+                        break;
+                    case 'o':
+                        chip8Params.overflow = true;
+                        break;
+                    case 'i':
+                        chip8Params.incrementI = true;
+                        break;
+                }
             }
         } else {
             file = argv[i];
@@ -198,10 +207,6 @@ int main(int argc, char* argv[]) {
     if (file.empty()) {
         std::cerr << "Error: No valid rom file path provided." << std::endl;
         return 1;
-    }
-
-    for (const auto& opt : options) {
-        std::cout << "Options: " << opt << std::endl;
     }
 
     Chip8 chip8 = Chip8(chip8Params);

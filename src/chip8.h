@@ -3,9 +3,9 @@
 
 struct Chip8Params {
     uint16_t fontAddr = 0x0;
-    bool option_1 = false;
-    bool option_2 = false;
-    bool option_3 = false;
+    bool shiftVy = false;
+    bool overflow = false;
+    bool incrementI = false;
 };
 
 class Chip8 {
@@ -30,6 +30,9 @@ public:
     bool soundFlag = false;
 
     uint16_t fontAddr;
+    bool shiftVy;
+    bool overflow;
+    bool incrementI;
 
     const uint8_t fontset[80] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
