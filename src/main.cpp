@@ -186,17 +186,27 @@ int main(int argc, char* argv[]) {
             chip8Params.fontAddr = std::stoi(fontArg, nullptr, base);
 
         } else if (arg[0] == '-') {
-            for (size_t j = 1; j < arg.size(); ++j) {
-                switch (arg[j]) {
-                    case 's':
-                        chip8Params.shiftVy = true;
-                        break;
-                    case 'o':
-                        chip8Params.overflow = true;
-                        break;
-                    case 'i':
-                        chip8Params.incrementI = true;
-                        break;
+            if (arg[1] == '-') {
+                if (arg == "--shift-vs") {
+                    chip8Params.shiftAssignsVyToVx = true;
+                } else if (arg == "--i-overflow") {
+                    chip8Params.overflowOnAddI = true;
+                } else if (arg == "--increment-i") {
+                    chip8Params.autoIncrementI = true;
+                }
+            } else {
+                for (size_t j = 1; j < arg.size(); ++j) {
+                    switch (arg[j]) {
+                        case 's':
+                            chip8Params.shiftAssignsVyToVx = true;
+                            break;
+                        case 'o':
+                            chip8Params.overflowOnAddI = true;
+                            break;
+                        case 'i':
+                            chip8Params.autoIncrementI = true;
+                            break;
+                    }
                 }
             }
         } else {
