@@ -1,9 +1,11 @@
 #include "chip8.h"
+
 #include <SDL2/SDL.h>
 #include <atomic>
 #include <chrono>
 #include <iostream>
 #include <map>
+#include <set>
 #include <thread>
 
 const int DISPLAY_WIDTH = 64;
@@ -17,16 +19,12 @@ const int SAMPLE_RATE = 44100;
 const int AMPLITUDE = 28000;
 const double BEEP_FREQUENCY = 440.0;
 
-std::map<SDL_Keycode, int> keyMap;
+std::map<SDL_Keycode, int> keyMap = {
+    {SDLK_1, 0x1}, {SDLK_2, 0x2}, {SDLK_3, 0x3}, {SDLK_4, 0xC},
+    {SDLK_q, 0x4}, {SDLK_w, 0x5}, {SDLK_e, 0x6}, {SDLK_r, 0xD},
+    {SDLK_a, 0x7}, {SDLK_s, 0x8}, {SDLK_d, 0x9}, {SDLK_f, 0xE},
+    {SDLK_z, 0xA}, {SDLK_x, 0x0}, {SDLK_c, 0xB}, {SDLK_v, 0xF}};
 std::atomic<bool> running{true};
-Chip8 chip8;
-
-void initializeKeyMap() {
-    keyMap = {{SDLK_1, 0x1}, {SDLK_2, 0x2}, {SDLK_3, 0x3}, {SDLK_4, 0xC},
-              {SDLK_q, 0x4}, {SDLK_w, 0x5}, {SDLK_e, 0x6}, {SDLK_r, 0xD},
-              {SDLK_a, 0x7}, {SDLK_s, 0x8}, {SDLK_d, 0x9}, {SDLK_f, 0xE},
-              {SDLK_z, 0xA}, {SDLK_x, 0x0}, {SDLK_c, 0xB}, {SDLK_v, 0xF}};
-}
 
 void audioCallback(void* userdata, Uint8* stream, int len) {
     Sint16* buffer = reinterpret_cast<Sint16*>(stream);
@@ -84,7 +82,7 @@ bool initializeSDL(SDL_Window*& window, SDL_Renderer*& renderer) {
     return true;
 }
 
-void cpuThread() {
+void cpuThread(Chip8& chip8) {
     const int INTERVAL_US = 1000000 / IPS;
 
     while (running) {
@@ -100,7 +98,7 @@ void cpuThread() {
     }
 }
 
-void handleInput(SDL_Event& event) {
+void handleInput(Chip8& chip8, SDL_Event& event) {
     if (event.type == SDL_QUIT) {
         running = false;
     } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
@@ -111,7 +109,7 @@ void handleInput(SDL_Event& event) {
     }
 }
 
-void renderDisplay(SDL_Renderer* renderer) {
+void renderDisplay(Chip8& chip8, SDL_Renderer* renderer) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
@@ -128,7 +126,7 @@ void renderDisplay(SDL_Renderer* renderer) {
     SDL_RenderPresent(renderer);
 }
 
-void mainLoop(SDL_Renderer* renderer) {
+void mainLoop(Chip8& chip8, SDL_Renderer* renderer) {
     SDL_Event event;
     const int INTERVAL_US = 1000000 / FPS;
 
@@ -136,13 +134,13 @@ void mainLoop(SDL_Renderer* renderer) {
         auto frameStart = std::chrono::high_resolution_clock::now();
 
         while (SDL_PollEvent(&event)) {
-            handleInput(event);
+            handleInput(chip8, event);
         }
 
         chip8.decrementTimers();
 
         if (chip8.getDrawFlag()) {
-            renderDisplay(renderer);
+            renderDisplay(chip8, renderer);
             chip8.setDrawFlag(false);
         }
 
@@ -164,19 +162,103 @@ void mainLoop(SDL_Renderer* renderer) {
     }
 }
 
+bool parseArgument(int argc, char* argv[], std::string& file,
+                   Chip8Params& chip8Params) {
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (arg == "-h" || arg == "--help") {
+            std::cout
+                << "Usage: ./program <file_path> [OPTIONS]\n\n"
+                   "Options:\n"
+                   "  -h, --help             Show this help message and exit\n"
+                   "  -f <location>          Set the font memory address\n"
+                   "  --shift-vs             Assign V[y] to V[x] on SHR "
+                   "instruction\n"
+                   "  --i-overflow           Set V[0xF] on ADD I, V[x] if "
+                   "overflow occurs\n"
+                   "  --increment-i          Automatically increment I after "
+                   "loading/storing\n"
+                   "  -s                     Enable shift assign V[y] to V[x]\n"
+                   "  -o                     Enable overflow check on ADD I, "
+                   "V[x]\n"
+                   "  -i                     Enable auto increment of I\n"
+                   "  <file_path>           Path to the ROM file to be "
+                   "executed\n";
+            return false;
+        } else if (arg == "-f") {
+            if (i + 1 >= argc) {
+                std::cerr << "Error: No valid memory address provided."
+                          << std::endl;
+                return false;
+            }
+
+            std::string fontArg = argv[++i];
+            int base =
+                (fontArg.find_first_of("xX") != std::string::npos) ? 16 : 10;
+            chip8Params.fontAddr = std::stoi(fontArg, nullptr, base);
+
+        } else if (arg[0] == '-') {
+            if (arg[1] == '-') {
+                if (arg == "--shift-vy") {
+                    chip8Params.shiftAssignsVyToVx = true;
+                } else if (arg == "--i-overflow") {
+                    chip8Params.overflowOnAddI = true;
+                } else if (arg == "--increment-i") {
+                    chip8Params.autoIncrementI = true;
+                } else {
+                    std::cerr << "Error: Unknown option '" << arg << "'."
+                              << std::endl;
+                    return false;
+                }
+            } else {
+                for (size_t j = 1; j < arg.size(); ++j) {
+                    if (arg[j] == 's') {
+                        chip8Params.shiftAssignsVyToVx = true;
+                    } else if (arg[j] == 'o') {
+                        chip8Params.overflowOnAddI = true;
+                    } else if (arg[j] == 'i') {
+                        chip8Params.autoIncrementI = true;
+                    } else {
+                        std::cerr << "Error: Unknown option '" << arg << "'."
+                                  << std::endl;
+                        return false;
+                    }
+                }
+            }
+        } else {
+            file = argv[i];
+        }
+    }
+
+    if (file.empty()) {
+        std::cerr << "Error: No valid rom file path provided." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 int main(int argc, char* argv[]) {
+    std::string file;
+    Chip8Params chip8Params;
+
+    if (!parseArgument(argc, argv, file, chip8Params)) {
+        return 1;
+    }
+
+    Chip8 chip8 = Chip8(chip8Params);
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
 
     if (!initializeSDL(window, renderer))
         return 1;
-    initializeKeyMap();
 
-    chip8.loadRom("Animal Race [Brian Astle].ch8");
-    // chip8.loadRom("INVADERS.ch8");
+    chip8.loadRom(file);
 
-    std::thread cpu(cpuThread);
-    mainLoop(renderer);
+    std::thread cpu(cpuThread, std::ref(chip8));
+    mainLoop(chip8, renderer);
 
     cpu.join();
     SDL_DestroyWindow(window);

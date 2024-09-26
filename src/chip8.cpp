@@ -1,6 +1,14 @@
 #include "chip8.h"
 
-Chip8::Chip8() {
+#include <cstring>
+#include <fstream>
+#include <iostream>
+
+Chip8::Chip8(const Chip8Params& chip8Params)
+    : fontAddr(chip8Params.fontAddr)
+    , shiftAssignsVyToVx(chip8Params.shiftAssignsVyToVx)
+    , overflowOnAddI(chip8Params.overflowOnAddI)
+    , autoIncrementI(chip8Params.autoIncrementI) {
     initialize();
 }
 
@@ -19,7 +27,7 @@ void Chip8::initialize() {
     soundTimer = 0;
 
     for (int i = 0; i < 80; i++) {
-        memory[i] = fontset[i];
+        memory[fontAddr + i] = fontset[i];
     }
 
     rng = std::mt19937(std::random_device{}());
@@ -128,7 +136,8 @@ void Chip8::runCycle() {
                     break;
 
                 case 0x0006: // 8xy6 - SHR Vx {, Vy}
-                    V[x] = V[y];
+                    if (shiftAssignsVyToVx)
+                        V[x] = V[y];
                     V[0xF] = V[x] & 0x1;
                     V[x] >>= 1;
                     break;
@@ -139,7 +148,8 @@ void Chip8::runCycle() {
                     break;
 
                 case 0x000E: // 8xyE - SHL Vx {, Vy}
-                    V[x] = V[y];
+                    if (shiftAssignsVyToVx)
+                        V[x] = V[y];
                     V[0xF] = V[x] >> 7;
                     V[x] <<= 1;
                     break;
@@ -238,7 +248,8 @@ void Chip8::runCycle() {
                     break;
 
                 case 0x001E: // Fx1E - ADD I, Vx
-                    // V[0xF] = (I + V[x] > 0xFFF) ? 1 : 0;
+                    if (overflowOnAddI)
+                        V[0xF] = (I + V[x] > 0xFFF) ? 1 : 0;
                     I += V[x];
                     break;
 
@@ -255,13 +266,15 @@ void Chip8::runCycle() {
                 case 0x0055: // Fx55 - LD [I], Vx
                     for (int i = 0; i <= x; i++)
                         memory[I + i] = V[i];
-                    I += x + 1;
+                    if (autoIncrementI)
+                        I += x + 1;
                     break;
 
                 case 0x0065: // Fx65 - LD Vx, [I]
                     for (int i = 0; i <= x; i++)
                         V[i] = memory[I + i];
-                    I += x + 1;
+                    if (autoIncrementI)
+                        I += x + 1;
                     break;
 
                 default:

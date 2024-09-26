@@ -1,8 +1,12 @@
 #include <bitset>
-#include <cstring>
-#include <fstream>
-#include <iostream>
 #include <random>
+
+struct Chip8Params {
+    uint16_t fontAddr = 0x0;
+    bool shiftAssignsVyToVx = false;
+    bool overflowOnAddI = false;
+    bool autoIncrementI = false;
+};
 
 class Chip8 {
 public:
@@ -25,6 +29,11 @@ public:
     bool drawFlag = false;
     bool soundFlag = false;
 
+    uint16_t fontAddr;
+    bool shiftAssignsVyToVx;
+    bool overflowOnAddI;
+    bool autoIncrementI;
+
     const uint8_t fontset[80] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -44,7 +53,7 @@ public:
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
     };
 
-    Chip8();
+    Chip8(const Chip8Params& chip8Params);
 
     void initialize();
     void loadRom(std::string filename);
