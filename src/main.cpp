@@ -162,10 +162,8 @@ void mainLoop(Chip8& chip8, SDL_Renderer* renderer) {
     }
 }
 
-int main(int argc, char* argv[]) {
-    std::string file;
-    Chip8Params chip8Params;
-
+bool parseArgument(int argc, char* argv[], std::string& file,
+                   Chip8Params& chip8Params) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
@@ -187,12 +185,12 @@ int main(int argc, char* argv[]) {
                    "  -i                     Enable auto increment of I\n"
                    "  <file_path>           Path to the ROM file to be "
                    "executed\n";
-            return 0;
+            return false;
         } else if (arg == "-f") {
             if (i + 1 >= argc) {
                 std::cerr << "Error: No valid memory address provided."
                           << std::endl;
-                return 1;
+                return false;
             }
 
             std::string fontArg = argv[++i];
@@ -211,7 +209,7 @@ int main(int argc, char* argv[]) {
                 } else {
                     std::cerr << "Error: Unknown option '" << arg << "'."
                               << std::endl;
-                    return 1;
+                    return false;
                 }
             } else {
                 for (size_t j = 1; j < arg.size(); ++j) {
@@ -224,7 +222,7 @@ int main(int argc, char* argv[]) {
                     } else {
                         std::cerr << "Error: Unknown option '" << arg << "'."
                                   << std::endl;
-                        return 1;
+                        return false;
                     }
                 }
             }
@@ -235,6 +233,17 @@ int main(int argc, char* argv[]) {
 
     if (file.empty()) {
         std::cerr << "Error: No valid rom file path provided." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+int main(int argc, char* argv[]) {
+    std::string file;
+    Chip8Params chip8Params;
+
+    if (!parseArgument(argc, argv, file, chip8Params)) {
         return 1;
     }
 
