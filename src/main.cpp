@@ -170,8 +170,23 @@ int main(int argc, char* argv[]) {
         std::string arg = argv[i];
 
         if (arg == "-h" || arg == "--help") {
-            std::cout << "Usage: ./program <file_path> [-h|--help] [-f "
-                         "location] [-s] [-v]\n";
+            std::cout
+                << "Usage: ./program <file_path> [OPTIONS]\n\n"
+                   "Options:\n"
+                   "  -h, --help             Show this help message and exit\n"
+                   "  -f <location>          Set the font memory address\n"
+                   "  --shift-vs             Assign V[y] to V[x] on SHR "
+                   "instruction\n"
+                   "  --i-overflow           Set V[0xF] on ADD I, V[x] if "
+                   "overflow occurs\n"
+                   "  --increment-i          Automatically increment I after "
+                   "loading/storing\n"
+                   "  -s                     Enable shift assign V[y] to V[x]\n"
+                   "  -o                     Enable overflow check on ADD I, "
+                   "V[x]\n"
+                   "  -i                     Enable auto increment of I\n"
+                   "  <file_path>           Path to the ROM file to be "
+                   "executed\n";
             return 0;
         } else if (arg == "-f") {
             if (i + 1 >= argc) {
@@ -187,25 +202,29 @@ int main(int argc, char* argv[]) {
 
         } else if (arg[0] == '-') {
             if (arg[1] == '-') {
-                if (arg == "--shift-vs") {
+                if (arg == "--shift-vy") {
                     chip8Params.shiftAssignsVyToVx = true;
                 } else if (arg == "--i-overflow") {
                     chip8Params.overflowOnAddI = true;
                 } else if (arg == "--increment-i") {
                     chip8Params.autoIncrementI = true;
+                } else {
+                    std::cerr << "Error: Unknown option '" << arg << "'."
+                              << std::endl;
+                    return 1;
                 }
             } else {
                 for (size_t j = 1; j < arg.size(); ++j) {
-                    switch (arg[j]) {
-                        case 's':
-                            chip8Params.shiftAssignsVyToVx = true;
-                            break;
-                        case 'o':
-                            chip8Params.overflowOnAddI = true;
-                            break;
-                        case 'i':
-                            chip8Params.autoIncrementI = true;
-                            break;
+                    if (arg[j] == 's') {
+                        chip8Params.shiftAssignsVyToVx = true;
+                    } else if (arg[j] == 'o') {
+                        chip8Params.overflowOnAddI = true;
+                    } else if (arg[j] == 'i') {
+                        chip8Params.autoIncrementI = true;
+                    } else {
+                        std::cerr << "Error: Unknown option '" << arg << "'."
+                                  << std::endl;
+                        return 1;
                     }
                 }
             }
